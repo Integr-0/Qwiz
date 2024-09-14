@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" class="v-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <link rel="stylesheet" href="static/component_styles.css">
+
+    <link rel="icon" href="static/favicon.png" type="image/png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js" crossorigin="anonymous"></script>
+
+    <title>Qwiz Login</title>
+
+    <script>
+        async function login() {
+            setError("");
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            if (password.length === 0) {
+                setError("Password cannot be empty!");
+                return;
+            }
+
+            if (username.length === 0) {
+                setError("Username cannot be empty!");
+                return;
+            }
+
+            const hashedPw = (await sha512(password))
+
+            const response = await fetch("/api/account/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    passwordHash512: hashedPw
+                })
+            });
+
+            if (response.status === 200) {
+                window.location.href = "/";
+            } else {
+                setError(await response.text());
+            }
+        }
+
+        function redirectToMain() {
+            window.location.href = "/";
+        }
+
+        function redirectToSignup() {
+            window.location.href = "/signup";
+        }
+
+        function setError(message) {
+            const errorBox = getErrorBox();
+            errorBox.innerText = message;
+        }
+
+        function getErrorBox() {
+            return document.getElementById("errorBox");
+        }
+
+        function sha512(str) {
+            return crypto.subtle.digest("SHA-512", new TextEncoder("utf-8").encode(str)).then(buf => {
+                return Array.prototype.map.call(new Uint8Array(buf), x=>(('00'+x.toString(16)).slice(-2))).join('');
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="h-end" style="position:fixed;">
+        <button class="pr-button" onclick="redirectToSignup()">Signup</button>
+        <button class="sc-button" onclick="redirectToMain()">Back</button>
+    </div>
+
+    <div class="center"> 
+        <div class="column">
+            <div class="h-center">
+                <img src="static/logo.png" alt="Qwiz Logo" style="width: 100px; margin: 10px;">
+            </div>
+
+            <div class="container" style="margin-top: 50px;">
+                <h3>Welcome back</h3>
+
+                <br>
+    
+                <div class="column h-start">
+                    <label for="username" style="margin-left: 10px;">Username</label>
+                    <input type="text" class="textinput" id="username">
+                </div>
+                
+                <div class="column h-start">
+                    <label for="password" style="margin-left: 10px;">Password</label>
+                    <input type="password" class="textinput" id="password">
+                </div>
+
+                <div class="column h-start">
+                    <div id="errorBox" style="color: red; margin-top: 5px; max-width: 260px; word-wrap: break-word; margin-left: 10px;"></div>
+                    <button class="pr-button" onclick="login()">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

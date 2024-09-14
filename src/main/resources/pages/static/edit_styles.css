@@ -1,0 +1,51 @@
+.questionwrapper {
+    margin-bottom: 20px;
+}
+
+.ml10 {
+    margin-left: 10px;
+}
+
+.descriptionboxstyle {
+    width: 50vw; 
+    font-size: 15px; 
+}
+
+.descriptionboxstyle55 {
+    width: 55.5vw; 
+    font-size: 15px; 
+}
+
+.vw55 {
+    width: 55.5vw;
+}
+
+.vw50 {
+    width: 50vw;
+}
+
+.addoptionbutton {
+    margin-top: 20px;
+    width: 100px;
+}
+
+.savebutton {
+    margin-top: 20px;
+
+    width: 70px;
+}
+
+.optioncontainer {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+}
+
+.errorbox {
+    color: red; 
+    margin-top: 5px; 
+    max-width: 260px; 
+    word-wrap: break-word; 
+    margin-left: 10px;
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" class="v-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <link rel="stylesheet" href="static/component_styles.css">
+
+    <link rel="icon" href="static/favicon.png" type="image/png">
+    <title>Qwiz</title>
+
+    <script>
+        function redirectToSignup() {
+            window.location.href = "/signup";
+        }
+
+        function redirectToLogin() {
+            window.location.href = "/login";
+        }
+    </script>
+</head>
+<body>
+    <div class="h-space"> 
+        <div>
+            <img src="static/logo.png" alt="Qwiz Logo" style="width: 100px; margin: 10px;">
+        </div>
+
+        <div>
+            <button class="pr-button" onclick="redirectToLogin()">Login</button>
+            <button class="sc-button" onclick="redirectToSignup()">Signup</button>
+        </div>
+    </div>
+
+    <br>
+
+    <div class="h-start" style="margin-right: 10%; margin-left: 10%; margin-top: 50px; margin-bottom: 50px;">
+        <div style="width: fit-content;">
+            <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252; width: fit-content;">Welcome to Qwiz</h2>
+            <p>An intuitive learning system</p>
+    
+        </div>
+    </div>
+
+
+
+    <div class="h-end column" style="margin-right: 10%; margin-bottom: 50px;">
+        <div class="h-start container column">
+            <div style="width: 100%;">
+                <h3 style="text-align: center;">Join a game</h3>
+            </div>
+
+            <br>
+
+            <div class="column">
+                <label for="code" style="margin-left: 10px;">Code</label>
+                <input type="text" class="textinput max-for-joinbox" id="code">
+            </div>
+            
+            <div>
+                <div id="errorBox" style="color: red; margin-top: 5px; max-width: 260px; word-wrap: break-word; margin-left: 10px;"></div>
+                <button class="pr-button" onclick="join()">Join with code</button>
+            </div>
+        </div>   
+    </div>
+
+    <div class="h-start column" style="margin-left: 10%; margin-bottom: 50px;">
+        <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252;">● About us</h2>
+        <p class="max-for-sidetext">
+            Qwiz is a platform for creating and taking quizzes.
+            Quizzes do not have a limit for the number of questions or players. 
+            Questions can also have infinite numbers of options.
+            Qwiz can be used for educational purposes, fun, or even for hosting game shows.
+            We are looking forward to seeing what you create with Qwiz!
+        </p>
+    </div>
+
+    <div class="h-end column" style="margin-right: 10%; margin-bottom: 50px;">
+        <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252;">How to play ● </h2>
+        <p class="max-for-sidetext">
+            To play a hosted game, you don't need an account!
+            Just enter the game code and your name to join the game.
+            The rest is handled by the host. The built-in ranking system will keep track of your score,
+            and the host can see the results at the end of the game. This way, 
+            you can compete against your friends and family!
+        </p>     
+    </div>
+
+    <div class="h-start column" style="margin-left: 10%; margin-bottom: 50px;">
+        <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252;">● Creating a quiz</h2>
+        <p class="max-for-sidetext">
+            To create a quiz, you need an account. Accounts are free and easy to create.
+            Once you have an account, you can create quizzes with any number of questions and options.
+        </p>
+    </div>
+
+    <div class="h-end column" style="margin-right: 10%; margin-bottom: 50px;">
+        <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252;">Development Notice ● </h2>
+        <p class="max-for-sidetext">
+            Qwiz is still in development. 
+            If you encounter any bugs or have any suggestions, please contact us!
+            We are always looking for ways to improve the platform.
+        </p>     
+    </div>
+
+    <br>
+
+    <div class="h-center column">
+        <h2 style="font-family: Vollkorn, sans-serif; color: #6d6252; font-size: 20px;">What are you waiting for?</h2>
+        <div>
+            <button class="pr-button" onclick="redirectToSignup()">Signup</button>
+            <button class="sc-button" onclick="redirectToLogin()">Login</button>
+        </div>
+    </div>
+
+    <br>
+</body>
+</html>

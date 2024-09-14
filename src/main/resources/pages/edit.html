@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en" class="v-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <link rel="stylesheet" href="../static/component_styles.css">
+    <link rel="stylesheet" href="../static/edit_styles.css">
+
+    <link rel="icon" href="../static/favicon.png" type="image/png">
+
+    <title>Qwiz Edit</title>
+
+    <script>
+        let quiz;
+        
+        window.onload = async () => {
+            var pn = window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1);
+
+            await fetchQuiz(pn);
+            
+            quiz.questions.forEach((question, index) => {
+                var questionElm = buildQuestionWrapper(index+1, question);
+                document.getElementById("questioncontainer").appendChild(questionElm);
+            });
+
+            setFieldValues();
+        }
+
+        async function fetchQuiz(id) {
+            var response = await fetch(`/api/quiz/get?id=${id}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+
+            quiz = await response.json();
+        }
+
+        function redirectToMain() {
+            window.location.href = "/dashboard";
+        }
+
+        function addQuestion() {
+            var questionElm = buildQuestionWrapper(document.getElementsByClassName("questionwrapper").length+1, {
+                title: "",
+                description: "",
+                options: []
+            });
+
+            document.getElementById("questioncontainer").appendChild(questionElm);
+        }
+
+        function clearErrors() {
+            var errorBoxes = document.getElementsByClassName("errorbox");
+            for (var i = 0; i < errorBoxes.length; i++) {
+                errorBoxes[i].innerHTML = "";
+            }
+        }
+
+        function setErrorOption(questionNum, optionNum, message) {
+            var errorBox = document.getElementById(`errorBox-${questionNum}-${optionNum}`);
+            errorBox.innerHTML = message;
+        }
+
+        function setErrorQuestion(questionNum, message) {
+            var errorBox = document.getElementById(`errorBox-${questionNum}`);
+            errorBox.innerHTML = message;
+        }
+
+        function setError(message) {
+            var errorBox = document.getElementById(`errorBox`);
+            errorBox.innerHTML = message;
+        }
+
+        function setSuccess(message) {
+            var successBox = document.getElementById(`successBox`);
+            successBox.innerHTML = message;
+        }
+
+        async function pushToServer() {
+            var quizTitle = document.getElementById("quiztitle").value
+            var quizdescription = document.getElementById("quizdescription").value
+
+            var questions = [];
+
+            var questionWrappers = document.getElementsByClassName("questionwrapper");
+            for (var i = 0; i < questionWrappers.length; i++) {
+                var title = document.getElementById(`title-${i+1}`).value
+                var description = document.getElementById(`description-${i+1}`).value
+
+                if (title.length === 0) {
+                    setErrorQuestion(i+1, "Title cannot be empty!");
+                    return;
+                }
+
+                if (description.length === 0) {
+                    setErrorQuestion(i+1, "Description cannot be empty!");
+                    return;
+                }
+
+                var question = {
+                    title: title,
+                    description: description,
+                    options: []
+                };
+
+                var optionWrappers = document.getElementById(`optioncontainer-${i+1}`).children;
+                for (var j = 0; j < optionWrappers.length; j++) {
+                    var optionTitle = document.getElementById(`title-${i+1}-${j+1}`).value
+                    var optionDescription = document.getElementById(`description-${i+1}-${j+1}`).value
+                    var optionIsCorrect = document.getElementById(`correct-${i+1}-${j+1}`).checked
+
+                    if (optionTitle.length === 0) {
+                        setErrorOption(i+1, j+1, "Title cannot be empty!");
+                        return;
+                    }
+
+                    if (optionDescription.length === 0) {
+                        setErrorOption(i+1, j+1, "Description cannot be empty!");
+                        return;
+                    }
+
+                    var option = {
+                        title: optionTitle,
+                        description: optionDescription,
+                        isCorrect: optionIsCorrect
+                    };
+
+                    question.options.push(option);
+                }
+
+                questions.push(question);
+            }
+
+            
+
+            var response = await fetch("/api/quiz/edit", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: quiz.id,
+                    questions: questions,
+                    title: quizTitle,
+                    description: quizdescription
+                })
+            });
+            
+            if (response.status === 200) {
+                setError("")
+                clearErrors();
+                setSuccess(await response.text());
+            } else {
+                setSuccess("");
+                setError(await response.text());
+            }
+        }
+
+        function addOption(questionNum) {
+            var optionElm = buildOption(document.getElementById(`optioncontainer-${questionNum}`).children.length+1, questionNum);
+            document.getElementById(`optioncontainer-${questionNum}`).appendChild(optionElm);
+        }
+
+        function removeOption(questionNum, optionNum) {
+            var target = document.getElementById(`optioncontainer-${questionNum}`).children[optionNum-1];
+            target.remove();
+        }
+
+        function removeQuestion(questionNum) {
+            var target = document.getElementById(`questioncontainer`).children[questionNum-1];
+            target.remove();
+        }
+
+        function setFieldValues() {
+            var quizTitle = document.getElementById("quiztitle");
+            quizTitle.value = quiz.title;
+
+            var quizDescription = document.getElementById("quizdescription");
+            quizDescription.value = quiz.description;
+
+            quiz.questions.forEach((question, indexO) => {
+                var title = document.getElementById(`title-${indexO+1}`);
+                title.value = question.title;
+
+                var description = document.getElementById(`description-${indexO+1}`);
+                description.value = question.description;
+
+                question.options.forEach((option, index) => {
+                    var title = document.getElementById(`title-${indexO+1}-${index+1}`);
+                    title.value = option.title;
+
+                    var description = document.getElementById(`description-${indexO+1}-${index+1}`);
+                    description.value = option.description;
+
+                    var correct = document.getElementById(`correct-${indexO+1}-${index+1}`);
+                    correct.checked = option.isCorrect;
+                });
+            });
+        }
+
+        function buildOption(num, questionNum) {
+            var container = document.createElement("div");
+            container.classList.add("container");
+            container.classList.add("column");
+            container.classList.add("h-start");
+            container.style.marginTop = "10px";
+
+            var optionTitle = document.createElement("h2");
+            optionTitle.classList.add("ml10");
+            optionTitle.innerHTML = "Option "+num;
+
+            var errorBox = document.createElement("div");
+            errorBox.classList.add("errorbox");
+            errorBox.id = "errorBox-"+questionNum+"-"+num;
+
+            var br = document.createElement("br");
+
+            var titleContainer = document.createElement("div");
+            titleContainer.classList.add("column");
+            titleContainer.classList.add("h-start");
+
+            var titleLabel = document.createElement("label");
+            titleLabel.classList.add("ml10");
+            titleLabel.innerHTML = "Title";
+
+            var titleInput = document.createElement("input");
+            titleInput.classList.add("textinput");
+            titleInput.classList.add("vw50");
+            titleInput.id = "title-"+questionNum+"-"+num;
+            titleInput.type = "text";
+            titleInput.autocomplete = "off";
+
+            titleContainer.appendChild(titleLabel);
+            titleContainer.appendChild(titleInput);
+
+            var br2 = document.createElement("br");
+
+            var descriptionContainer = document.createElement("div");
+            descriptionContainer.classList.add("column");
+            descriptionContainer.classList.add("h-start");
+
+            var descriptionLabel = document.createElement("label");
+            descriptionLabel.classList.add("ml10");
+            descriptionLabel.innerHTML = "Description";
+
+            var descriptionInput = document.createElement("input");
+            descriptionInput.classList.add("textinput");
+            descriptionInput.classList.add("descriptionboxstyle");
+            descriptionInput.id = "description-"+questionNum+"-"+num;
+            descriptionInput.type = "text";
+            descriptionInput.autocomplete = "off";
+
+            descriptionContainer.appendChild(descriptionLabel);
+            descriptionContainer.appendChild(descriptionInput);
+
+            var br3 = document.createElement("br");
+
+            var checkboxContainer = document.createElement("div");
+            checkboxContainer.classList.add("row");
+
+            var checkbox = document.createElement("input");
+            checkbox.classList.add("checkbox");
+            checkbox.id = "correct-"+questionNum+"-"+num;
+            checkbox.type = "checkbox";
+            
+            var checkboxLabel = document.createElement("p");
+            checkboxLabel.innerHTML = "Accepted answer";
+
+            checkboxContainer.appendChild(checkbox);
+            checkboxContainer.appendChild(checkboxLabel);
+
+            var br4 = document.createElement("br");
+
+            var deleteButton = document.createElement("button");
+            deleteButton.classList.add("dg-button");
+            deleteButton.classList.add("savebutton");
+            deleteButton.innerHTML = "Delete";
+            deleteButton.onclick = function() {
+                removeOption(questionNum, num);
+            }
+
+            container.appendChild(optionTitle);
+            container.appendChild(errorBox);
+            container.appendChild(br);
+            container.appendChild(titleContainer);
+            container.appendChild(br2);
+            container.appendChild(descriptionContainer);
+            container.appendChild(br3);
+            container.appendChild(checkboxContainer);
+            container.appendChild(br4);
+            container.appendChild(deleteButton);
+
+            return container;
+        }
+
+        function buildQuestionWrapper(num, question) {
+            var container = document.createElement("div");
+            container.classList.add("container");
+            container.classList.add("column");
+            container.classList.add("questionwrapper");
+            container.classList.add("h-start");
+
+            var questionTitle = document.createElement("h2");
+            questionTitle.classList.add("ml10");
+            questionTitle.innerHTML = "Question "+num;
+
+            var br = document.createElement("br");
+
+            var errorBox = document.createElement("div");
+            errorBox.classList.add("errorbox");
+            errorBox.id = "errorBox-"+num;
+
+            var br1 = document.createElement("br");
+
+            var titleContainer = document.createElement("div");
+            titleContainer.classList.add("column");
+            titleContainer.classList.add("h-start");
+
+            var titleLabel = document.createElement("label");
+            titleLabel.classList.add("ml10");
+            titleLabel.innerHTML = "Question title";
+
+            var titleInput = document.createElement("input");
+            titleInput.classList.add("textinput");
+            titleInput.classList.add("vw55");
+            titleInput.id = "title-"+num;
+            titleInput.type = "text";
+            titleInput.autocomplete = "off";
+
+            titleContainer.appendChild(titleLabel);
+            titleContainer.appendChild(titleInput);
+
+            var br2 = document.createElement("br");
+
+            var descriptionContainer = document.createElement("div");
+            descriptionContainer.classList.add("column");
+            descriptionContainer.classList.add("h-start");
+
+            var descriptionLabel = document.createElement("label");
+            descriptionLabel.classList.add("ml10");
+            descriptionLabel.innerHTML = "Question description";
+
+            var descriptionInput = document.createElement("input");
+            descriptionInput.classList.add("textinput");
+            descriptionInput.classList.add("descriptionboxstyle55");
+            descriptionInput.id = "description-"+num;
+            descriptionInput.type = "text";
+            descriptionInput.autocomplete = "off";
+
+            descriptionContainer.appendChild(descriptionLabel);
+            descriptionContainer.appendChild(descriptionInput);
+
+            var br3 = document.createElement("br");
+
+            var optionContainer = document.createElement("div");
+            optionContainer.classList.add("optioncontainer");
+            optionContainer.id = "optioncontainer-"+num;
+
+            if (question.options && question.options.length !== 0) {
+                question.options.forEach((option, index) => {
+                    var optionElm = buildOption(index+1, num);
+                    optionContainer.appendChild(optionElm);
+                });
+            }
+
+            var br4 = document.createElement("br");
+
+            var buttonContainer = document.createElement("div");
+            buttonContainer.classList.add("row");
+
+            var addOptionButton = document.createElement("button");
+            addOptionButton.classList.add("sc-button");
+            addOptionButton.classList.add("addoptionbutton");
+            addOptionButton.innerHTML = "Add option";
+            addOptionButton.onclick = function() {
+                addOption(num);
+            }
+
+            var deleteButton = document.createElement("button");
+            deleteButton.classList.add("dg-button");
+            deleteButton.classList.add("savebutton");
+            deleteButton.innerHTML = "Delete";
+            deleteButton.onclick = function() {
+                removeQuestion(num);
+            }
+
+            buttonContainer.appendChild(addOptionButton);
+            buttonContainer.appendChild(deleteButton);
+
+            container.appendChild(questionTitle);
+            container.appendChild(br);
+            container.appendChild(errorBox);
+            container.appendChild(br1);
+            container.appendChild(titleContainer);
+            container.appendChild(br2);
+            container.appendChild(descriptionContainer);
+            container.appendChild(br3);
+            container.appendChild(optionContainer);
+            container.appendChild(br4);
+            container.appendChild(buttonContainer);
+
+            return container;
+        }
+    </script>
+</head>
+<body>
+    <div class="h-space"> 
+        <div>
+            <img src="../static/logo.png" alt="Qwiz Logo" style="width: 100px; margin: 10px;">
+        </div>
+
+        <div>
+            <button class="sc-button" onclick="redirectToMain()">Back</button>
+
+        </div>
+    </div>
+
+    <div class="center column"> 
+        <div class="container" style="margin-bottom: 20px;">
+            <h2 class="h-start ml10">Edit quiz</h2>
+            <div class="column h-start">
+                <label for="quiztitle" style="margin-left: 10px;">Quiz title</label>
+                <input type="text" class="textinput" id="quiztitle" style="width: 50vw;" autocomplete="off">
+            </div>
+
+            <div class="column h-start">
+                <label for="quizdescription" style="margin-left: 10px;">Quiz description</label>
+                <input type="text" class="textinput" id="quizdescription" style="width: 50vw;" autocomplete="off">
+            </div>
+        </div>
+        <div class="column" id="questioncontainer">
+            
+        </div>
+
+        <button class="sc-button" style="width: 50vw;" onclick="addQuestion()">Add question</button>
+
+        <div id="errorBox" style="color: red; margin-top: 5px; max-width: 260px; word-wrap: break-word; margin-left: 10px;"></div>
+        <div id="successBox" style="color: green; margin-top: 5px; max-width: 260px; word-wrap: break-word; margin-left: 10px;"></div>
+        <button class="pr-button savebutton" style="width: 50vw;" onclick="pushToServer()">Save</button>
+
+    </div>
+</body>
+</html>

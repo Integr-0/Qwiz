@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" class="v-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <link rel="stylesheet" href="static/component_styles.css">
+    <link rel="stylesheet" href="static/dashboard_style.css">
+
+    <link rel="icon" href="static/favicon.png" type="image/png">
+    <title>Qwiz Dashboard</title>
+
+    <script>
+        window.onload = async () => {
+            await fetchQuizes();
+        }
+        
+        async function logout() {
+            const response = await fetch("/api/account/logout", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (response.status === 200) {
+                window.location.href = "/";
+            }
+        }
+
+        async function fetchQuizes() {
+            const response = await fetch("/api/quiz/list?offset=0", {
+                method: "GET"
+            });
+
+            if (response.status === 200) {
+                const quizes = await response.json();
+                quizes.forEach(quiz => {
+                    appendQuiz(quiz.title, quiz.description, quiz.id);
+                });
+            }
+        }
+
+        function startQuiz(id) {
+           //TODO: Implement quiz start
+        }
+
+        async function deleteQuiz(id) {
+            const response = await fetch("/api/quiz/delete", {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: id
+                })
+            });
+
+            if (response.status === 200) {
+                document.getElementById(id).remove();
+            }
+        }
+
+        async function deleteAccount() {
+            const response = await fetch("/api/account/delete", {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (response.status === 200) {
+                window.location.href = "/";
+            }
+        }
+
+        function appendQuiz(title, description, id) {
+            const quizContainer = document.getElementById("quizcontainer");
+
+            const quizCard = document.createElement("div");
+            quizCard.classList.add("container");
+            quizCard.classList.add("quizcard");
+            quizCard.id = id;
+            const quizTitle = document.createElement("h2");
+            quizTitle.classList.add("quiztitle");
+            quizTitle.innerText = prepCard(title);
+
+            const quizDescription = document.createElement("p");
+            quizDescription.classList.add("quizdescription");
+            quizDescription.innerText = prepCard(description);
+
+            const quizButton = document.createElement("button");
+            quizButton.classList.add("pr-button");
+            quizButton.onclick = () => {
+                startQuiz(id);
+            }
+
+            quizButton.innerText = "Play";
+
+            const editButton = document.createElement("button");
+            editButton.classList.add("sc-button");
+            editButton.onclick = () => {
+                window.location.href = `/edit/${id}`;
+            }
+
+            editButton.innerText = "Edit";
+
+            const deleteButton = document.createElement("button");
+            deleteButton.classList.add("dg-button");
+            deleteButton.onclick = () => {
+                deleteQuiz(id);
+            }
+
+            deleteButton.innerText = "Delete";
+
+            quizCard.appendChild(quizTitle);
+            quizCard.appendChild(quizDescription);
+            quizCard.appendChild(quizButton);
+            quizCard.appendChild(editButton);
+            quizCard.appendChild(deleteButton);
+
+            quizContainer.appendChild(quizCard);
+        }
+
+        function prepCard(str) {
+            return trimString(str, 20)
+        }
+
+        function trimString(string, length) {
+            return string.length > length ? string.substring(0, length) + "..." : string;
+        }
+
+        async function createQuiz() {
+            setError("");
+            const title = document.getElementById("quiztitle").value;
+            const description = document.getElementById("quizdescription").value;
+
+            if (title.length === 0) {
+                setError("Title cannot be empty!");
+                return;
+            }
+
+            if (description.length === 0) {
+                setError("Description cannot be empty!");
+                return;
+            }
+
+            const response = await fetch("/api/quiz/create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description
+                })
+            });
+
+            if (response.status === 200) {
+                var id = await response.text()
+                document.getElementById("quiztitle").value = "";
+                document.getElementById("quizdescription").value = "";
+                await appendQuiz(title, description, id);
+                window.location.href = "/edit/" + id;
+            } else {
+                setError(await response.text());
+            }
+        }
+
+        function setError(message) {
+            const errorBox = getErrorBox();
+            errorBox.innerText = message;
+        }
+
+        function getErrorBox() {
+            return document.getElementById("errorBox");
+        }
+    </script>
+</head>
+<body>
+    <div class="h-space"> 
+        <div>
+            <img src="static/logo.png" alt="Qwiz Logo" style="width: 100px; margin: 10px;">
+        </div>
+
+        <div>
+            <button class="sc-button" onclick="logout()">Logout</button>
+            <button class="dg-button" onclick="deleteAccount()">Delete Account</button>
+        </div>
+    </div>
+
+    <div style="margin: 50px;">
+        <div class="container">
+            <h2 style="margin-left: 10px;">Create a quiz</h2>
+            <p style="margin-left: 10px;">Create a new quiz to your liking.</p>
+
+            <div style="margin: 20px;">
+                <div class="column">
+                    <label for="quiztitle" style="margin-left: 10px;">Quiz Title</label>
+                    <input type="text" id="quiztitle" class="textinput" autoComplete='off'>
+                </div>
+
+                <br>
+
+                <div class="column">
+                    <label for="quizdescription" style="margin-left: 10px;">Quiz Description</label>
+                    <textarea class="textarea" style="height: 200px;" id="quizdescription" autoComplete='off'></textarea>
+                </div>
+                <div id="errorBox" style="color: red; margin-top: 5px; max-width: 260px; word-wrap: break-word; margin-left: 10px;"></div>
+                <button class="pr-button" onclick="createQuiz()">Create</button>
+            </div>
+        </div>
+    
+        <div class="container" style="margin-top: 20px;">
+            <h2 style="margin-left: 10px;">Saved quizzes</h2>
+            <p style="margin-left: 10px;">Play, Edit or Delte previously created quizzes.</p>
+            <div id="quizcontainer" class="quizcontainer">
+                
+            </div>
+        </div>
+    </div>
+</html>

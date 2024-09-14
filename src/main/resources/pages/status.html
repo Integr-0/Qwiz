@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" class="v-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <link rel="stylesheet" href="static/component_styles.css">
+
+    <link rel="icon" href="static/favicon.png" type="image/png">
+
+    <title>Qwiz Error</title>
+
+    <script>
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const message = urlParams.get('message');
+
+            setError(code, message);
+        }
+
+        function redirectToMain() {
+            window.location.href = "/";
+        }
+        
+        function setError(code, message) {
+            document.getElementById("codefield").innerText = `Error ${code}`;
+            document.getElementById("messagefield").innerText = message;
+        }
+    </script>
+</head>
+<body>
+    <div class="h-end" style="position:fixed;">
+        <button class="sc-button" onclick="redirectToMain()">Back</button>
+    </div>
+
+    <div class="center"> 
+        <div class="column">
+            <div class="h-center">
+                <img src="static/logo.png" alt="Qwiz Logo" style="width: 100px; margin: 10px;">
+            </div>
+
+            <div class="container" style="margin-top: 50px;">
+                <h3 id="codefield"></h3>    
+                <p id="messagefield"></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

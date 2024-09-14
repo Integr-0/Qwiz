@@ -1,0 +1,7 @@
+db:
+  connectionString: "mongodb://localhost:27017/"
+  databaseName: "qwiz"
+
+session:
+  secretEncryptKey: "001122334455a66778899aabbccdeeff"
+  secretSignKey: "6819b57a326945ca1968f4523659"
