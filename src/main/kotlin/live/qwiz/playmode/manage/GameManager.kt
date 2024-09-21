@@ -13,10 +13,13 @@ class GameManager {
             val game = Game(quiz, hostId, hashMapOf())
             games[code] = game
             val thread = Thread {
-                while (game.shouldContinue()) {
-                    runBlocking {
-                        game.autoProgress()
+                while (!game.shouldShutdown()) {
+                    if (game.shouldContinue()) {
+                        runBlocking {
+                            game.autoProgress()
+                        }
                     }
+
                     Thread.sleep(1000)
                 }
 

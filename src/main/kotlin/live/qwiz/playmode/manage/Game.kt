@@ -67,6 +67,12 @@ class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<Clien
         return gameState != GameState.RESULT && clientSessions.isNotEmpty()
     }
 
+    fun shouldShutdown(): Boolean {
+        if (hostSession == null && gameState != GameState.WAITING) return true
+        if (clientSessions.isEmpty() && gameState != GameState.WAITING) return true
+        return false
+    }
+
     private fun allHaveAnswered(): Boolean {
         return clientSessions.size <= answers.size
     }

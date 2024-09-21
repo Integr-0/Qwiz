@@ -96,6 +96,8 @@ fun Application.handleRouting() {
         get("/status") {
             call.respondFile(File("src/main/resources/pages/status.html"))
         }
+
+        options {  }
     }
 }
 
@@ -144,8 +146,20 @@ fun Routing.handlePlayMode() {
     }
 
     webSocket("/api/game/client_socket/{code}") {
-        val gameCode = call.parameters["code"] ?: return@webSocket
-        val game = GameManager.resolveGame(gameCode) ?: return@webSocket
+        val gameCode = call.parameters["code"]
+
+        if (gameCode == null) {
+            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid game code!"))
+            return@webSocket
+        }
+
+
+        val game = GameManager.resolveGame(gameCode)
+
+        if (game == null) {
+            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Game does not exist!"))
+            return@webSocket
+        }
 
         while (true) {
             try {
@@ -167,6 +181,8 @@ fun Routing.handlePlayMode() {
                         }
                     }
                 } else {
+                    sendSerialized(JoinGameResponsePacket("Ass"))
+
                     if (game.gameState == Game.Companion.GameState.WAITING) {
                         sendSerialized(JoinGameResponsePacket("Game has already started!"))
                         break

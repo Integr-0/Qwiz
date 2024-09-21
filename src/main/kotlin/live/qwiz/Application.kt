@@ -9,13 +9,13 @@ import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.metrics.dropwizard.*
+import io.ktor.server.netty.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
-import io.ktor.server.tomcat.jakarta.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
 import live.qwiz.config.ConfigSystem
@@ -23,10 +23,9 @@ import live.qwiz.database.configureDatabases
 import live.qwiz.routing.*
 import live.qwiz.session.account.AccountSession
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 fun main() {
-    embeddedServer(Tomcat, port = 8080, host = "0.0.0.0", module = Application::module)
+    embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
@@ -39,7 +38,10 @@ fun Application.module() {
         val secretEncryptKey = hex(configSecretEncryptKey)
         val secretSignKey = hex(configSecretSignKey)
 
+
         cookie<AccountSession>("session", SessionStorageMemory()) {
+            cookie.secure = false
+            cookie.httpOnly = true
             cookie.path = "/"
             cookie.maxAgeInSeconds = 60 * 60 // 1 hour
             transform(SessionTransportTransformerEncrypt(secretEncryptKey, secretSignKey))
@@ -59,17 +61,26 @@ fun Application.module() {
         allowMethod(HttpMethod.Patch)
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.AccessControlAllowOrigin)
+        allowHeader(HttpHeaders.Accept)
         anyHost() // TODO: Don't do this in production if possible. Try to limit it.
+        allowHeaders { true }
+        HttpMethod.DefaultMethods.forEach { allowMethod(it) }
+        allowHeader(HttpHeaders.SetCookie)
+        allowHeader(HttpHeaders.Cookie)
+        exposeHeader(HttpHeaders.SetCookie)
+        exposeHeader(HttpHeaders.Cookie)
+        allowCredentials = true
     }
 
-    install(DropwizardMetrics) {
+    /*install(DropwizardMetrics) {
         Slf4jReporter.forRegistry(registry)
             .outputTo(this@module.log)
             .convertRatesTo(TimeUnit.SECONDS)
             .convertDurationsTo(TimeUnit.MILLISECONDS)
             .build()
             .start(10, TimeUnit.SECONDS)
-    }
+    }*/
 
     install(WebSockets) {
         pingPeriod = Duration.ofSeconds(15)
