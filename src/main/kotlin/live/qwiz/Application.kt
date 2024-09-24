@@ -1,9 +1,8 @@
 package live.qwiz
 
-import com.codahale.metrics.Slf4jReporter
 import io.ktor.http.*
 import io.ktor.serialization.*
-import io.ktor.serialization.gson.*
+import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
@@ -18,6 +17,16 @@ import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializer
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 import live.qwiz.config.ConfigSystem
 import live.qwiz.database.configureDatabases
 import live.qwiz.routing.*
@@ -50,7 +59,10 @@ fun Application.module() {
     }
 
     install(ContentNegotiation) {
-        gson {  }
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+        })
     }
 
     install(CORS) {
@@ -73,20 +85,12 @@ fun Application.module() {
         allowCredentials = true
     }
 
-    /*install(DropwizardMetrics) {
-        Slf4jReporter.forRegistry(registry)
-            .outputTo(this@module.log)
-            .convertRatesTo(TimeUnit.SECONDS)
-            .convertDurationsTo(TimeUnit.MILLISECONDS)
-            .build()
-            .start(10, TimeUnit.SECONDS)
-    }*/
-
     install(WebSockets) {
         pingPeriod = Duration.ofSeconds(15)
         timeout = Duration.ofSeconds(15)
         maxFrameSize = Long.MAX_VALUE
         masking = false
+        contentConverter = KotlinxWebsocketSerializationConverter(Json)
     }
 
     install(StatusPages) {
@@ -107,4 +111,20 @@ fun Application.module() {
 
     configureDatabases()
     handleRouting()
+}
+
+inline fun <reified T> T.jsonTree(): JsonElement {
+    return Json.encodeToJsonElement<T>(this)
+}
+
+inline fun <reified T> T.json(): String {
+    return Json.encodeToString<T>(this)
+}
+
+inline fun <reified T> JsonElement.to(): T {
+    return Json.decodeFromJsonElement<T>(this)
+}
+
+inline fun <reified T> String.to(): T {
+    return Json.decodeFromString<T>(this)
 }

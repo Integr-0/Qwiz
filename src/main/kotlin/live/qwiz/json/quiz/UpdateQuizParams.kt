@@ -1,5 +1,7 @@
 package live.qwiz.json.quiz
 
-import live.qwiz.database.quiz.question.Question
+import live.qwiz.database.quiz.part.QuizPart
+import kotlinx.serialization.Serializable
 
-data class UpdateQuizParams(val title: String, val description: String, val questions: HashSet<Question>, val id: String)
+@Serializable
+data class UpdateQuizParams(val title: String, val description: String, val parts: HashSet<QuizPart>, val id: String)

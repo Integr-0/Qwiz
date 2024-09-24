@@ -3,12 +3,11 @@ package live.qwiz.database.quiz
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import live.qwiz.database.quiz.question.Question
-import live.qwiz.util.HashGenerator
+import live.qwiz.database.quiz.part.QuizPart
 import org.bson.Document
 
 @Serializable
-data class Quiz(val title: String, val description: String, val authorId: String, val questions: HashSet<Question>, val id: String) {
+data class Quiz(val title: String, val description: String, val authorId: String, val parts: HashSet<QuizPart>, val id: String) {
     fun toDocument(): Document = Document.parse(Json.encodeToString(this))
 
     companion object {

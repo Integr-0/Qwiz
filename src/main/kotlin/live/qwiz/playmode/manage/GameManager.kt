@@ -13,7 +13,7 @@ class GameManager {
             val game = Game(quiz, hostId, hashMapOf())
             games[code] = game
             val thread = Thread {
-                while (!game.shouldShutdown()) {
+                while (true) {
                     if (game.shouldContinue()) {
                         runBlocking {
                             game.autoProgress()
@@ -23,12 +23,12 @@ class GameManager {
                     Thread.sleep(1000)
                 }
 
-                games.remove(code)
-                gameProgressionThreads.remove(game)
+                //games.remove(code)
+                //gameProgressionThreads.remove(game)
             }
 
             gameProgressionThreads[game] = thread
-            thread.start()
+            //thread.start()
 
             return code
         }

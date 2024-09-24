@@ -1,13 +1,9 @@
 package live.qwiz.playmode.manage
 
-import com.google.gson.Gson
-import com.google.gson.JsonElement
 import io.ktor.server.websocket.*
 import live.qwiz.database.quiz.Quiz
-import live.qwiz.database.quiz.question.Question
-import live.qwiz.playmode.socket.gamepacket.s2c.AskQuestionPacket
+import live.qwiz.database.quiz.part.QuizPart
 import live.qwiz.playmode.socket.gamepacket.s2c.base.GameS2CPacket
-import live.qwiz.playmode.socket.gamepacket.s2c.part.OptionPart
 import live.qwiz.util.HashGenerator
 
 class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<ClientIdentifier, WebSocketServerSession>, var hostSession: WebSocketServerSession? = null) {
@@ -28,7 +24,7 @@ class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<Clien
         when (gameState) {
             GameState.WAITING -> {
                 gameState = GameState.QUESTION
-                askQuestion(quiz.questions.elementAt(currentQuestionIndex))
+                askQuestion(quiz.parts.elementAt(currentQuestionIndex))
                 currentQuestionIndex++
             }
 
@@ -38,9 +34,9 @@ class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<Clien
             }
 
             GameState.ANSWER -> {
-                if (currentQuestionIndex < quiz.questions.size) {
+                if (currentQuestionIndex < quiz.parts.size) {
                     gameState = GameState.QUESTION
-                    askQuestion(quiz.questions.elementAt(currentQuestionIndex))
+                    askQuestion(quiz.parts.elementAt(currentQuestionIndex))
                     currentQuestionIndex++
                 } else {
                     GameState.RESULT
@@ -85,19 +81,15 @@ class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<Clien
         answers[clientId] = answer
     }
 
-    private suspend fun askQuestion(question: Question) {
+    private suspend fun askQuestion(part: QuizPart) {
         answers.clear()
-        val optionParts = question.options.map { OptionPart(it.title, it.description) }
-        sendToEach("server_ask_question", AskQuestionPacket(question.title, optionParts))
+
+        sendToEach(part.getS2CQuestionPacket())
     }
 
-    private fun Any.ps(): JsonElement {
-        return Gson().toJsonTree(this)
-    }
-
-    private suspend fun sendToEach(action: String, message: Any) {
+    private suspend fun sendToEach(message: GameS2CPacket) {
         clientSessions.forEach {
-            it.value.sendSerialized<GameS2CPacket>(GameS2CPacket(action, message.ps()))
+            it.value.sendSerialized<GameS2CPacket>(message)
         }
     }
 

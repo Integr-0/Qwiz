@@ -1,4 +1,4 @@
-package live.qwiz.database.quiz.question.option
+package live.qwiz.database.quiz.part.question.option
 
 import kotlinx.serialization.Serializable
 

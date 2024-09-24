@@ -31,7 +31,6 @@ dependencies {
     implementation("io.ktor:ktor-server-cors-jvm")
     implementation("io.ktor:ktor-server-metrics-jvm")
     implementation("io.ktor:ktor-server-content-negotiation-jvm")
-    implementation("io.ktor:ktor-serialization-gson-jvm")
     implementation("io.ktor:ktor-server-html-builder-jvm")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:$kotlinx_html_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")

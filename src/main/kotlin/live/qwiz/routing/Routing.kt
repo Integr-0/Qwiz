@@ -2,7 +2,6 @@
 
 package live.qwiz.routing
 
-import com.google.gson.Gson
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
@@ -20,17 +19,21 @@ import live.qwiz.json.AuthParams
 import live.qwiz.json.quiz.DeleteQuizParams
 import live.qwiz.json.quiz.UpdateQuizParams
 import live.qwiz.json.response.quiz.ListQuizEntry
+import live.qwiz.jsonTree
 import live.qwiz.playmode.json.StartGameParams
 import live.qwiz.playmode.manage.ClientIdentifier
 import live.qwiz.playmode.manage.Game
 import live.qwiz.playmode.manage.GameManager
 import live.qwiz.playmode.socket.gamepacket.c2s.JoinGamePacket
-import live.qwiz.playmode.socket.gamepacket.s2c.JoinGameResponsePacket
+import live.qwiz.playmode.socket.gamepacket.s2c.S2CMessagePacket
 import live.qwiz.playmode.socket.gamepacket.c2s.AnswerPacket
-import live.qwiz.playmode.socket.gamepacket.c2s.HostProgressGamePacket
+import live.qwiz.playmode.socket.gamepacket.c2s.base.C2SActions
 import live.qwiz.playmode.socket.gamepacket.c2s.base.GameC2SPacket
+import live.qwiz.playmode.socket.gamepacket.s2c.base.GameS2CPacket
+import live.qwiz.playmode.socket.gamepacket.s2c.base.S2CActions
 import live.qwiz.session.account.AccountSession
 import live.qwiz.session.account.AccountSessionManager
+import live.qwiz.to
 import live.qwiz.util.HashGenerator
 import java.io.File
 import kotlin.math.min
@@ -108,7 +111,7 @@ fun Routing.handlePlayMode() {
         val startParams = call.receive<StartGameParams>()
 
         val quiz = call.tryGetQuizForEditsForApiCall(startParams.id, serverUser.id) ?: return@post
-        if (quiz.questions.isEmpty()) {
+        if (quiz.parts.isEmpty()) {
             call.respondLog("Quiz has no questions!", HttpStatusCode.BadRequest)
             return@post
         }
@@ -124,7 +127,9 @@ fun Routing.handlePlayMode() {
         val user = call.tryGetUserForApiCall() ?: return@webSocket
 
         if (game.hostId != user.id) {
+            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("You are not the host!").jsonTree()))
             close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "You are not the host!"))
+
             return@webSocket
         }
 
@@ -134,8 +139,9 @@ fun Routing.handlePlayMode() {
             try {
                 val controlPacket = receiveDeserialized<GameC2SPacket>()
                 when (controlPacket.action) {
-                    "host_progress" -> {
+                    C2SActions.HOST_PROGRESS -> {
                         game.progressGameStage()
+                        sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Progressed game!").jsonTree()))
                     }
                 }
             } catch (e: Exception) {
@@ -149,60 +155,62 @@ fun Routing.handlePlayMode() {
         val gameCode = call.parameters["code"]
 
         if (gameCode == null) {
+            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Invalid game code!").jsonTree()))
             close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid game code!"))
             return@webSocket
         }
 
-
         val game = GameManager.resolveGame(gameCode)
 
         if (game == null) {
+            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Game does not exist!").jsonTree()))
             close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Game does not exist!"))
             return@webSocket
         }
 
+        sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Connected to game: $gameCode!").jsonTree()))
+
         while (true) {
             try {
                 if (game.clientSessions.values.contains(this)) {
-                    // handle game
                     val identifier = game.clientSessions.filter { it.value == this }.keys.first()
 
                     if (game.gameState == Game.Companion.GameState.QUESTION) {
                         if (!game.hasAnswered(identifier)) {
                             val controlPacket = receiveDeserialized<GameC2SPacket>()
 
-                            if (controlPacket.action == "client_answer") {
-                                val answerPacket = controlPacket.to<AnswerPacket>()
+                            if (controlPacket.action == C2SActions.CLIENT_ANSWER) {
+                                val answerPacket = controlPacket.content.to<AnswerPacket>()
 
-                                if (answerPacket.num > 0 && answerPacket.num < game.quiz.questions.size) {
+                                if (answerPacket.num > 0 && answerPacket.num < game.quiz.parts.size) {
                                     game.regAnswer(identifier, answerPacket.num)
+                                    sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Answer registered!").jsonTree()))
                                 }
                             }
                         }
                     }
                 } else {
-                    sendSerialized(JoinGameResponsePacket("Ass"))
-
-                    if (game.gameState == Game.Companion.GameState.WAITING) {
-                        sendSerialized(JoinGameResponsePacket("Game has already started!"))
+                    if (game.gameState != Game.Companion.GameState.WAITING) {
+                        sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Game has already started!").jsonTree()))
                         break
                     }
 
-                    // handle login
-                    val joinItem = receiveDeserialized<JoinGamePacket>()
+                    val controlPacket = receiveDeserialized<GameC2SPacket>()
 
-                    if (joinItem.username.isBlank()) {
-                        sendSerialized(JoinGameResponsePacket("Invalid username!"))
-                        break
+                    if (controlPacket.action == C2SActions.CLIENT_LOGIN) {
+                        val joinItem = controlPacket.content.to<JoinGamePacket>()
+
+                        if (joinItem.username.isBlank()) {
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Invalid username!").jsonTree()))
+                        } else if (game.clientSessions.any { it.key.username == joinItem.username }) {
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Username already exists!").jsonTree()))
+                        } else {
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Joined with username ${joinItem.username}!").jsonTree()))
+
+                            val identifier = ClientIdentifier(game.getNewId(), joinItem.username)
+                            game.clientSessions[identifier] = this
+                        }
                     }
-
-                    if (game.clientSessions.any { it.key.username == joinItem.username }) {
-                        sendSerialized(JoinGameResponsePacket("Username already exists!"))
-                        break
-                    }
-
-                    val identifier = ClientIdentifier(game.getNewId(), joinItem.username)
-                    game.clientSessions[identifier] = this
                 }
 
             } catch (e: Exception) {
@@ -211,10 +219,6 @@ fun Routing.handlePlayMode() {
             }
         }
     }
-}
-
-inline fun <reified T> GameC2SPacket.to(): T {
-    return Gson().fromJson(this.content, T::class.java)
 }
 
 fun Routing.handleNonApiQuiz() {
@@ -333,22 +337,15 @@ fun Routing.handleQuiz() {
             return@patch
         }
 
-        updateParams.questions.forEachIndexed { _, question ->
-            if (question.title.isBlank()) {
+        updateParams.parts.forEachIndexed { _, part ->
+            if (!part.wData().validateEdits()) {
                 call.respondLog("Invalid parameters!", HttpStatusCode.BadRequest)
                 return@patch
-            }
-
-            for (option in question.options) {
-                if (option.title.isBlank()) {
-                    call.respondLog("Invalid parameters!", HttpStatusCode.BadRequest)
-                    return@patch
-                }
             }
         }
 
 
-        MainDatabaseHandler.getQuizDatabaseService().update(quiz.id, Quiz(updateParams.title, updateParams.description, quiz.authorId, updateParams.questions, quiz.id))
+        MainDatabaseHandler.getQuizDatabaseService().update(quiz.id, Quiz(updateParams.title, updateParams.description, quiz.authorId, updateParams.parts, quiz.id))
         call.respondLog("Questions updated!")
     }
 }
