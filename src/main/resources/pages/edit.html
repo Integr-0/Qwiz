@@ -23,7 +23,7 @@
             await fetchQuiz(pn);
             
             quiz.questions.forEach((question, index) => {
-                var questionElm = buildQuestionWrapper(index+1, question);
+                var questionElm = buildQuestion(index+1, question);
                 document.getElementById("questioncontainer").appendChild(questionElm);
             });
 
@@ -46,7 +46,7 @@
         }
 
         function addQuestion() {
-            var questionElm = buildQuestionWrapper(document.getElementsByClassName("questionwrapper").length+1, {
+            var questionElm = buildQuestion(document.getElementsByClassName("questionwrapper").length+1, {
                 title: "",
                 description: "",
                 options: []
@@ -92,20 +92,17 @@
             for (var i = 0; i < questionWrappers.length; i++) {
                 var title = document.getElementById(`title-${i+1}`).value
                 var description = document.getElementById(`description-${i+1}`).value
+                var isPoll = document.getElementById(`isPoll-${i+1}`).checked
 
                 if (title.length === 0) {
                     setErrorQuestion(i+1, "Title cannot be empty!");
                     return;
                 }
 
-                if (description.length === 0) {
-                    setErrorQuestion(i+1, "Description cannot be empty!");
-                    return;
-                }
-
                 var question = {
                     title: title,
                     description: description,
+                    isPoll: isPoll,
                     options: []
                 };
 
@@ -120,11 +117,6 @@
                         return;
                     }
 
-                    if (optionDescription.length === 0) {
-                        setErrorOption(i+1, j+1, "Description cannot be empty!");
-                        return;
-                    }
-
                     var option = {
                         title: optionTitle,
                         description: optionDescription,
@@ -136,8 +128,6 @@
 
                 questions.push(question);
             }
-
-            
 
             var response = await fetch("/api/quiz/edit", {
                 method: "PATCH",
@@ -190,6 +180,9 @@
 
                 var description = document.getElementById(`description-${indexO+1}`);
                 description.value = question.description;
+
+                var isPoll = document.getElementById(`isPoll-${indexO+1}`);
+                isPoll.checked = question.isPoll;
 
                 question.options.forEach((option, index) => {
                     var title = document.getElementById(`title-${indexO+1}-${index+1}`);
@@ -270,7 +263,7 @@
             checkbox.type = "checkbox";
             
             var checkboxLabel = document.createElement("p");
-            checkboxLabel.innerHTML = "Accepted answer";
+            checkboxLabel.innerHTML = "Is Correct";
 
             checkboxContainer.appendChild(checkbox);
             checkboxContainer.appendChild(checkboxLabel);
@@ -299,7 +292,7 @@
             return container;
         }
 
-        function buildQuestionWrapper(num, question) {
+        function buildQuestion(num, question) {
             var container = document.createElement("div");
             container.classList.add("container");
             container.classList.add("column");
@@ -358,6 +351,22 @@
 
             var br3 = document.createElement("br");
 
+            var checkboxContainer = document.createElement("div");
+            checkboxContainer.classList.add("row");
+
+            var checkbox = document.createElement("input");
+            checkbox.classList.add("checkbox");
+            checkbox.id = "isPoll-"+num;
+            checkbox.type = "checkbox";
+
+            var checkboxLabel = document.createElement("p");
+            checkboxLabel.innerHTML = "Handle as Poll";
+
+            checkboxContainer.appendChild(checkbox);
+            checkboxContainer.appendChild(checkboxLabel);
+
+            var br4 = document.createElement("br");
+
             var optionContainer = document.createElement("div");
             optionContainer.classList.add("optioncontainer");
             optionContainer.id = "optioncontainer-"+num;
@@ -369,7 +378,7 @@
                 });
             }
 
-            var br4 = document.createElement("br");
+            var br5 = document.createElement("br");
 
             var buttonContainer = document.createElement("div");
             buttonContainer.classList.add("row");
@@ -401,8 +410,10 @@
             container.appendChild(br2);
             container.appendChild(descriptionContainer);
             container.appendChild(br3);
-            container.appendChild(optionContainer);
+            container.appendChild(checkboxContainer);
             container.appendChild(br4);
+            container.appendChild(optionContainer);
+            container.appendChild(br5);
             container.appendChild(buttonContainer);
 
             return container;

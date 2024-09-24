@@ -40,8 +40,9 @@ fun Application.module() {
 
 
         cookie<AccountSession>("session", SessionStorageMemory()) {
-            cookie.secure = false
+            cookie.secure = true
             cookie.httpOnly = true
+            cookie.extensions["SameSite"] = "None"
             cookie.path = "/"
             cookie.maxAgeInSeconds = 60 * 60 // 1 hour
             transform(SessionTransportTransformerEncrypt(secretEncryptKey, secretSignKey))
@@ -65,7 +66,6 @@ fun Application.module() {
         allowHeader(HttpHeaders.Accept)
         anyHost() // TODO: Don't do this in production if possible. Try to limit it.
         allowHeaders { true }
-        HttpMethod.DefaultMethods.forEach { allowMethod(it) }
         allowHeader(HttpHeaders.SetCookie)
         allowHeader(HttpHeaders.Cookie)
         exposeHeader(HttpHeaders.SetCookie)

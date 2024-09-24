@@ -334,13 +334,13 @@ fun Routing.handleQuiz() {
         }
 
         updateParams.questions.forEachIndexed { _, question ->
-            if (question.title.isBlank() || question.description.isBlank()) {
+            if (question.title.isBlank()) {
                 call.respondLog("Invalid parameters!", HttpStatusCode.BadRequest)
                 return@patch
             }
 
             for (option in question.options) {
-                if (option.title.isBlank() || option.description.isBlank()) {
+                if (option.title.isBlank()) {
                     call.respondLog("Invalid parameters!", HttpStatusCode.BadRequest)
                     return@patch
                 }
@@ -401,7 +401,7 @@ fun Routing.handleAccount() {
 
     post("/api/account/login") {
         if (call.sessions.get<AccountSession>() != null) {
-            call.respondLog("Already logged in!", HttpStatusCode.BadRequest)
+            call.respondLog("Already logged in!", HttpStatusCode.OK)
             return@post
         }
 
