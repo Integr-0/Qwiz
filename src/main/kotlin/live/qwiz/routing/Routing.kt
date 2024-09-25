@@ -135,6 +135,9 @@ fun Routing.handlePlayMode() {
 
         game.hostSession = this
 
+        sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Connected to game: $gameCode").jsonTree()))
+
+
         while (true) {
             try {
                 val controlPacket = receiveDeserialized<GameC2SPacket>()
