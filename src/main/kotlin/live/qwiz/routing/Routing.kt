@@ -27,6 +27,7 @@ import live.qwiz.playmode.manage.GameManager
 import live.qwiz.playmode.socket.gamepacket.c2s.JoinGamePacket
 import live.qwiz.playmode.socket.gamepacket.s2c.S2CMessagePacket
 import live.qwiz.playmode.socket.gamepacket.c2s.AnswerPacket
+import live.qwiz.playmode.socket.gamepacket.c2s.HostJoinGamePacket
 import live.qwiz.playmode.socket.gamepacket.c2s.base.C2SActions
 import live.qwiz.playmode.socket.gamepacket.c2s.base.GameC2SPacket
 import live.qwiz.playmode.socket.gamepacket.s2c.base.GameS2CPacket
@@ -123,32 +124,47 @@ fun Routing.handlePlayMode() {
 
     webSocket("/api/game/host_socket/{code}") {
         val gameCode = call.parameters["code"] ?: return@webSocket
-        val game = GameManager.resolveGame(gameCode) ?: return@webSocket
-        val user = call.tryGetUserForApiCall() ?: return@webSocket
+        val game = GameManager.resolveGame(gameCode)
 
-        if (game.hostId != user.id) {
-            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("You are not the host!").jsonTree()))
-            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "You are not the host!"))
-
+        if (game == null) {
+            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Game does not exist!").jsonTree()))
+            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Game does not exist!"))
             return@webSocket
         }
 
-        game.hostSession = this
-
         sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Connected to game: $gameCode").jsonTree()))
-
 
         while (true) {
             try {
-                val controlPacket = receiveDeserialized<GameC2SPacket>()
-                when (controlPacket.action) {
-                    C2SActions.HOST_PROGRESS -> {
-                        game.progressGameStage()
-                        sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Progressed game!").jsonTree()))
+
+                if (game.hostSession == this) {
+                    val controlPacket = receiveDeserialized<GameC2SPacket>()
+                    when (controlPacket.action) {
+                        C2SActions.HOST_PROGRESS -> {
+                            game.progressGameStage()
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Progressed game!").jsonTree()))
+                        }
+                    }
+                } else {
+                    val controlPacket = receiveDeserialized<GameC2SPacket>()
+                    if (controlPacket.action == C2SActions.HOST_LOGIN) {
+                        val sessionId = controlPacket.content.to<HostJoinGamePacket>().sessionId
+
+                        val user = AccountSessionManager.resolveUser(sessionId)
+
+                        if (user == null) {
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Invalid session!").jsonTree()))
+                        } else if (game.hostId != user.id) {
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("You are not the host!").jsonTree()))
+                        } else {
+                            game.hostSession = this
+                            sendSerialized(GameS2CPacket(S2CActions.MESSAGE, S2CMessagePacket("Logged in as host!").jsonTree()))
+                        }
                     }
                 }
             } catch (e: Exception) {
                 game.hostSession = null
+                println("DISCON HOST")
                 break
             }
         }
@@ -428,7 +444,7 @@ fun Routing.handleAccount() {
 
         call.sessions.set(session)
 
-        call.respondLog("Logged in!")
+        call.respondLog("Logged in! (SessionId: ${session.sessionId})")
     }
 
     delete("/api/account/delete") {
@@ -482,6 +498,14 @@ suspend fun ApplicationCall.tryGetUserForApiCall(): ServerUser? {
         this.respondLog("Unknown user!", HttpStatusCode.NotFound)
         return null
     }
+
+    return serverUser
+}
+
+fun ApplicationCall.tryGetUserForApiCallWs(): ServerUser? {
+    val userSession = this.sessions.get<AccountSession>() ?: return null
+
+    val serverUser = AccountSessionManager.resolveUser(userSession) ?: return null
 
     return serverUser
 }

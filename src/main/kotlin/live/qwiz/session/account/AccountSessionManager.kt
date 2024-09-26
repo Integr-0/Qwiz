@@ -32,6 +32,13 @@ class AccountSessionManager {
             }
         }
 
+        fun resolveUser(sessionId: String): ServerUser? {
+            return runBlocking {
+                val session = sessions.filter { it.key.sessionId == sessionId }.keys.firstOrNull()
+                MainDatabaseHandler.getUserDatabaseService().getById(sessions[session]!!)
+            }
+        }
+
         private fun containsSessionId(sessionId: String): Boolean {
             return sessions.keys.any { it.sessionId == sessionId }
         }

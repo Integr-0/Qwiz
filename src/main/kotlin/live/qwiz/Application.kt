@@ -95,13 +95,7 @@ fun Application.module() {
 
     install(StatusPages) {
         exception<Throwable> { call, cause ->
-            if (cause is BadRequestException) {
-                when (cause.cause) {
-                    is JsonConvertException -> {
-                        call.respondText(text = "500: Malformed Json", status = HttpStatusCode.InternalServerError)
-                    }
-                }
-            } else call.respondText(text = "500: Internal Server Error: ($cause)", status = HttpStatusCode.InternalServerError)
+            call.respondText(text = "500: Internal Server Error: (${cause.message})", status = HttpStatusCode.InternalServerError)
         }
 
         status { call, code ->
