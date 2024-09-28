@@ -60,7 +60,7 @@ class Game(val quiz: Quiz, val hostId: String, val clientSessions: HashMap<Clien
 
     fun shouldContinue(): Boolean {
         if (hostSession == null && gameState != GameState.WAITING) return false
-        return gameState != GameState.RESULT && clientSessions.isNotEmpty()
+        return gameState != GameState.RESULT
     }
 
     fun shouldShutdown(): Boolean {

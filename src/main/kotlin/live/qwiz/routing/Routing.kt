@@ -164,7 +164,6 @@ fun Routing.handlePlayMode() {
                 }
             } catch (e: Exception) {
                 game.hostSession = null
-                println("DISCON HOST")
                 break
             }
         }
